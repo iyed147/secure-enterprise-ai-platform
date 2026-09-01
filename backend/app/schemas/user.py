@@ -1,9 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class MeResponse(BaseModel):
     user_id: int
     full_name: str
-    email: EmailStr
+    email: str
     role: str
     is_active: bool

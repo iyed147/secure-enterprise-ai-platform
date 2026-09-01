@@ -10,7 +10,11 @@ class Settings(BaseSettings):
     app_host: str = "127.0.0.1"
     app_port: int = 8000
 
-    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/secure_enterprise_ai"
+    database_url: str
+
+    secret_key: str = "change-me-in-env"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
 
 
 settings = Settings()

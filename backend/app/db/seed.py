@@ -5,7 +5,10 @@ from app.db.session import SessionLocal
 from app.models.role import Role
 from app.models.user import User
 from app.models.document import Document
+from app.core.security import hash_password
 
+
+DEFAULT_PASSWORD = "Passw0rd!"
 
 ROLES = ["developer", "hr", "finance"]
 
@@ -74,6 +77,7 @@ def get_or_create_user(db: Session, user_data: dict, role_id: int) -> User:
     user = User(
         full_name=user_data["full_name"],
         email=user_data["email"],
+        password_hash=hash_password(DEFAULT_PASSWORD),
         role_id=role_id,
         is_active=user_data["is_active"],
     )
