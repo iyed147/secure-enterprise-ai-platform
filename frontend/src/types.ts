@@ -7,6 +7,20 @@ export type MockLoginResponse = {
   role: string;
 };
 
+export type LoginRequest = {
+  email: string;
+  password: string;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  token_type: "bearer";
+  user_id: number;
+  full_name: string;
+  email: string;
+  role: string;
+};
+
 export type MeResponse = {
   user_id: number;
   full_name: string;
