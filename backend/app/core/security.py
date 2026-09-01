@@ -39,42 +39,27 @@ def decode_access_token(token: str) -> dict:
 
 
 def get_current_user(
-    authorization: str | None = Header(default=None),
+    authorization: str | None = Header(default=None, alias="Authorization"),
     db: Session = Depends(get_db),
 ) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid Authorization header",
         )
 
-    token = authorization.removeprefix("Bearer ").strip()
+    auth = authorization.strip()
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    else:
+        # tolérance dev: token brut sans Bearer
+        token = auth
 
-    # Backward-compat: dev mock tokens (mock-token-user-<id>)
-    if token.startswith("mock-token-user-"):
-        try:
-            user_id = int(token.removeprefix("mock-token-user-"))
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid mock token")
-        user = db.scalar(
-            select(User).options(joinedload(User.role)).where(User.id == user_id)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header",
         )
-        if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        return user
-
-    # Real JWT
-    payload = decode_access_token(token)
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
-
-    user = db.scalar(
-        select(User).options(joinedload(User.role)).where(User.id == int(user_id))
-    )
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
 
 import hashlib
 import math
