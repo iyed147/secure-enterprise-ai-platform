@@ -33,3 +33,25 @@ class AuthResponse(BaseModel):
     full_name: str
     email: str
     role: str
+
+class FaceEnrollRequest(BaseModel):
+    image_base64: str
+
+
+class FaceEnrollResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class FaceLoginRequest(BaseModel):
+    image_base64: str
+
+
+class FaceLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: int
+    full_name: str
+    email: str
+    role: str
+    match_distance: float

@@ -75,3 +75,32 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+import hashlib
+import math
+
+FACE_EMBEDDING_DIM = 32
+FACE_MATCH_THRESHOLD = 0.15  # euclidean distance threshold (placeholder scale)
+
+
+def generate_face_embedding(image_bytes: bytes) -> list[float]:
+    """
+    PLACEHOLDER embedding generator.
+    Produces a deterministic pseudo-vector from image bytes via hashing.
+    This is NOT real face recognition — it only allows testing the full
+    enroll/match/threshold pipeline before the real CV model (Episode 5)
+    is integrated. Same image bytes -> same embedding, different bytes ->
+    different embedding, but it does NOT capture actual facial features.
+    """
+    digest = hashlib.sha256(image_bytes).digest()
+    values = []
+    for i in range(FACE_EMBEDDING_DIM):
+        byte_val = digest[i % len(digest)]
+        values.append((byte_val / 255.0) * 2 - 1)  # normalize to [-1, 1]
+    return values
+
+
+def euclidean_distance(vec_a: list[float], vec_b: list[float]) -> float:
+    if len(vec_a) != len(vec_b):
+        raise ValueError("Embedding dimension mismatch")
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(vec_a, vec_b)))
