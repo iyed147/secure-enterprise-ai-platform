@@ -5,13 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import (
+    FACE_MATCH_THRESHOLD,
     create_access_token,
     euclidean_distance,
     generate_face_embedding,
     get_current_user,
     hash_password,
     verify_password,
-    FACE_MATCH_THRESHOLD,
 )
 from app.db.session import get_db
 from app.models.role import Role
@@ -30,10 +30,6 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-
-# ============================================================
-# REGISTER
-# ============================================================
 
 @router.post("/register", response_model=AuthResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
@@ -68,10 +64,6 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     )
 
 
-# ============================================================
-# LOGIN
-# ============================================================
-
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     email = payload.email.strip().lower()
@@ -93,10 +85,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     )
 
 
-# ============================================================
-# MOCK LOGIN
-# ============================================================
-
 @router.post("/mock-login", response_model=MockLoginResponse)
 def mock_login(payload: MockLoginRequest, db: Session = Depends(get_db)):
     email = payload.email.strip().lower()
@@ -114,10 +102,6 @@ def mock_login(payload: MockLoginRequest, db: Session = Depends(get_db)):
     )
 
 
-# ============================================================
-# FACE ENROLLMENT
-# ============================================================
-
 @router.post("/enroll-face", response_model=FaceEnrollResponse)
 def enroll_face(
     payload: FaceEnrollRequest,
@@ -132,11 +116,7 @@ def enroll_face(
     if not image_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image data")
 
-    # Placeholder embedding (list[float]). Will be replaced by a real
-    # face recognition model in Episode 5.
-    embedding = generate_face_embedding(image_bytes)
-
-    current_user.face_embedding = embedding
+    current_user.face_embedding = generate_face_embedding(image_bytes)  # bytes -> LargeBinary OK
     db.add(current_user)
     db.commit()
 
@@ -146,10 +126,6 @@ def enroll_face(
     )
 
 
-# ============================================================
-# FACE LOGIN
-# ============================================================
-
 @router.post("/login-face", response_model=FaceLoginResponse)
 def login_face(payload: FaceLoginRequest, db: Session = Depends(get_db)):
     try:
@@ -173,53 +149,10 @@ def login_face(payload: FaceLoginRequest, db: Session = Depends(get_db)):
     best_distance = float("inf")
 
     for candidate in candidates:
-        distance = euclidean_distance(probe_embedding, candidate.face_embedding)
-        if distance < best_distance:
-            best_distance = distance
-            best_match = candidate
-
-    if best_match is None or best_distance > FACE_MATCH_THRESHOLD:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Face not recognized")
-
-    if not best_match.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is inactive")
-
-    token = create_access_token(subject=str(best_match.id), role=best_match.role.name)
-
-    return FaceLoginResponse(
-        access_token=token,
-        user_id=best_match.id,
-        full_name=best_match.full_name,
-        email=best_match.email,
-        role=best_match.role.name,
-        match_distance=best_distance,
-    )
-
-
-@router.post("/login-face", response_model=FaceLoginResponse)
-def login_face(payload: FaceLoginRequest, db: Session = Depends(get_db)):
-    try:
-        image_bytes = base64.b64decode(payload.image_base64)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 image")
-
-    if not image_bytes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image data")
-
-    probe_embedding = generate_face_embedding(image_bytes)
-
-    candidates = db.scalars(
-        select(User).options(joinedload(User.role)).where(User.face_embedding.isnot(None))
-    ).all()
-
-    if not candidates:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No enrolled faces found")
-
-    best_match: User | None = None
-    best_distance = float("inf")
-
-    for candidate in candidates:
-        distance = euclidean_distance(probe_embedding, candidate.face_embedding)
+        try:
+            distance = euclidean_distance(probe_embedding, candidate.face_embedding)
+        except Exception:
+            continue
         if distance < best_distance:
             best_distance = distance
             best_match = candidate

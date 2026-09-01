@@ -38,3 +38,18 @@ export type DocumentResponse = {
   status: string;
   created_at: string;
 };
+
+export type FaceEnrollResponse = {
+  success: boolean;
+  message: string;
+};
+
+export type FaceLoginResponse = {
+  access_token: string;
+  token_type: "bearer";
+  user_id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  match_distance: number;
+};

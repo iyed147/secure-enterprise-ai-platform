@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { clearToken } from "../lib/auth";
-import type { DocumentResponse, MeResponse } from "../types";
-import { useNavigate } from "react-router-dom";
+import type { DocumentResponse, FaceEnrollResponse, MeResponse } from "../types";
+import WebcamCapture from "../components/WebcamCapture";
 
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,8 +24,7 @@ export default function DashboardPage() {
         setMe(meRes.data);
         setDocs(docsRes.data);
       } catch (err: any) {
-        const status = err?.response?.status;
-        if (status === 401) {
+        if (err?.response?.status === 401) {
           clearToken();
           navigate("/login");
           return;
@@ -35,6 +37,19 @@ export default function DashboardPage() {
     load();
   }, [navigate]);
 
+  const onFaceCaptureEnroll = async (image_base64: string) => {
+    setEnrollMsg(null);
+    setEnrollLoading(true);
+    try {
+      const { data } = await api.post<FaceEnrollResponse>("/api/v1/auth/enroll-face", { image_base64 });
+      setEnrollMsg(data.message || "Face enrolled.");
+    } catch (err: any) {
+      setEnrollMsg(err?.response?.data?.detail || "Face enroll failed");
+    } finally {
+      setEnrollLoading(false);
+    }
+  };
+
   if (loading) return <p>Chargement...</p>;
   if (error) return <p style={{ color: "crimson" }}>{error}</p>;
 
@@ -43,32 +58,26 @@ export default function DashboardPage() {
       <h2>Dashboard</h2>
       {me && (
         <div style={{ marginBottom: 16 }}>
-          <p>
-            <strong>Welcome:</strong> {me.full_name}
-          </p>
-          <p>
-            <strong>Role:</strong> {me.role}
-          </p>
-          <p>
-            <strong>Email:</strong> {me.email}
-          </p>
+          <p><strong>Welcome:</strong> {me.full_name}</p>
+          <p><strong>Role:</strong> {me.role}</p>
+          <p><strong>Email:</strong> {me.email}</p>
         </div>
       )}
-      <h3>Documents autorisés</h3>
-      {docs.length === 0 ? (
-        <p>Aucun document autorisé.</p>
-      ) : (
-        <ul>
-          {docs.map((doc) => (
-            <li key={doc.id}>
-              {doc.file_name} — <em>{doc.owner_role}</em>
-            </li>
-          ))}
-        </ul>
-      )}
-      <hr />
-      <h3>AI Knowledge Assistant (placeholder)</h3>
-      <p>Le module chat arrive à l'épisode suivant.</p>
+
+      <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h4>Face ID Enrollment</h4>
+        <WebcamCapture onCapture={onFaceCaptureEnroll} buttonLabel="Enrôler mon visage" disabled={enrollLoading} />
+        {enrollMsg && <p style={{ marginTop: 8 }}>{enrollMsg}</p>}
+      </div>
+
+      <h3 style={{ marginTop: 20 }}>Documents autorisés</h3>
+      <ul>
+        {docs.map((doc) => (
+          <li key={doc.id}>
+            {doc.file_name} — <em>{doc.owner_role}</em>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
