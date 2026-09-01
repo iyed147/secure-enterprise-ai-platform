@@ -1,18 +1,12 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { setToken } from "../lib/auth";
 import type { AuthResponse, MockLoginResponse } from "../types";
 
-const demoEmails = [
-  "iyed.dev@enterprise.local",
-  "sarah.hr@enterprise.local",
-  "omar.finance@enterprise.local",
-];
-
 export default function LoginPage() {
-  const [email, setEmail] = useState(demoEmails[0]);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,16 +50,16 @@ export default function LoginPage() {
   return (
     <div>
       <h2>Login</h2>
-      <p>Connecte-toi avec un compte seedé.</p>
+      <p>Connecte-toi avec ton compte.</p>
       <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, maxWidth: 420 }}>
         <label>Email</label>
-        <select value={email} onChange={(e) => setEmail(e.target.value)}>
-          {demoEmails.map((em) => (
-            <option key={em} value={em}>
-              {em}
-            </option>
-          ))}
-        </select>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="iyed.dev@enterprise.local"
+          required
+        />
 
         <label>Mot de passe</label>
         <input
@@ -73,6 +67,7 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Passw0rd!"
+          required
         />
 
         <button type="submit" disabled={loading}>
@@ -87,12 +82,16 @@ export default function LoginPage() {
       <details>
         <summary style={{ cursor: "pointer" }}>Mode développeur</summary>
         <p style={{ fontSize: 13, color: "#666" }}>
-          Connexion rapide sans mot de passe (mock-login, pour tests uniquement).
+          Connexion rapide sans mot de passe (mock-login, pour tests uniquement). Renseigne l'email ci-dessus puis clique ici.
         </p>
-        <button onClick={onMockLogin} disabled={mockLoading}>
+        <button onClick={onMockLogin} disabled={mockLoading || !email}>
           {mockLoading ? "Connexion..." : "Mock login (dev)"}
         </button>
       </details>
+
+      <p style={{ marginTop: 16, fontSize: 14 }}>
+        Pas encore de compte ? <Link to="/register">Créer un compte</Link>
+      </p>
     </div>
   );
 }

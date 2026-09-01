@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppLayout from "./AppLayout";
 import LoginPage from "../pages/LoginPage";
+import RegisterPage from "../pages/RegisterPage";
 import DashboardPage from "../pages/DashboardPage";
 import { getToken } from "../lib/auth";
 import type { JSX } from "react/jsx-runtime";
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "login", element: <LoginPage /> },
+      { path: "register", element: <RegisterPage /> },
       {
         path: "dashboard",
         element: (
