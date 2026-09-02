@@ -1,14 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.user import User
-from app.schemas.document import DocumentResponse
+from app.schemas.document import DocumentResponse, DocumentUploadResponse
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
+
+ALLOWED_ROLES = {"developer", "hr", "finance"}
+MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
 @router.get("", response_model=list[DocumentResponse])
@@ -45,3 +52,68 @@ def get_document(
         )
 
     return doc
+
+
+@router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+def upload_document(
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    allowed_roles: str = Form(...),  # ex: "developer,hr"
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # --- Validation du type de fichier ---
+    if file.content_type != "application/pdf" or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed")
+
+    # --- Validation des rôles ciblés ---
+    roles = [r.strip().lower() for r in allowed_roles.split(",") if r.strip()]
+    if not roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one allowed role is required")
+    invalid_roles = set(roles) - ALLOWED_ROLES
+    if invalid_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role(s): {', '.join(sorted(invalid_roles))}",
+        )
+
+    # --- Lecture + validation taille ---
+    file_bytes = file.file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file")
+    if len(file_bytes) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File exceeds 20MB limit")
+
+    # --- Nom de fichier unique sur disque (évite collisions) ---
+    original_name = file.filename
+    safe_suffix = uuid.uuid4().hex[:8]
+    stored_file_name = f"{safe_suffix}_{original_name}"
+
+    upload_dir = settings.upload_dir
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, stored_file_name)
+
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+
+    # --- Création en DB ---
+    # Note : Document.file_name est unique -> on stocke stored_file_name (unique) ici,
+    # pas original_name, pour éviter les collisions entre deux uploads du même nom.
+    doc = Document(
+        title=title or original_name,
+        file_name=stored_file_name,
+        owner_role=current_user.role.name,
+        allowed_roles=roles,
+        status="uploaded",
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    return DocumentUploadResponse(
+        id=doc.id,
+        title=doc.title,
+        file_name=doc.file_name,
+        status=doc.status,
+        message="Document uploaded successfully. Processing not yet implemented.",
+    )

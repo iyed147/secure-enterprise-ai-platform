@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { clearToken } from "../lib/auth";
 import type { DocumentResponse, FaceEnrollResponse, MeResponse } from "../types";
 import WebcamCapture from "../components/WebcamCapture";
+import DocumentUpload from "../components/DocumentUpload";
 
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
@@ -14,28 +15,30 @@ export default function DashboardPage() {
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [meRes, docsRes] = await Promise.all([
-          api.get<MeResponse>("/api/v1/me"),
-          api.get<DocumentResponse[]>("/api/v1/documents"),
-        ]);
-        setMe(meRes.data);
-        setDocs(docsRes.data);
-      } catch (err: any) {
-        if (err?.response?.status === 401) {
-          clearToken();
-          navigate("/login");
-          return;
-        }
-        setError(err?.response?.data?.detail || "Failed to load dashboard");
-      } finally {
-        setLoading(false);
+  const loadDashboard = async () => {
+    try {
+      const [meRes, docsRes] = await Promise.all([
+        api.get<MeResponse>("/api/v1/me"),
+        api.get<DocumentResponse[]>("/api/v1/documents"),
+      ]);
+      setMe(meRes.data);
+      setDocs(docsRes.data);
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        clearToken();
+        navigate("/login");
+        return;
       }
-    };
-    load();
-  }, [navigate]);
+      setError(err?.response?.data?.detail || "Failed to load dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onFaceCaptureEnroll = async (image_base64: string) => {
     setEnrollMsg(null);
@@ -69,6 +72,8 @@ export default function DashboardPage() {
         <WebcamCapture onCapture={onFaceCaptureEnroll} buttonLabel="Enrôler mon visage" disabled={enrollLoading} />
         {enrollMsg && <p style={{ marginTop: 8 }}>{enrollMsg}</p>}
       </div>
+
+      <DocumentUpload onUploaded={loadDashboard} />
 
       <h3 style={{ marginTop: 20 }}>Documents autorisés</h3>
       <ul>

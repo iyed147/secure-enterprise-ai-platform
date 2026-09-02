@@ -13,3 +13,11 @@ class DocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DocumentUploadResponse(BaseModel):
+    id: int
+    title: str
+    file_name: str
+    status: str
+    message: str

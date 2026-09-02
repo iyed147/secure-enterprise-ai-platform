@@ -53,3 +53,11 @@ export type FaceLoginResponse = {
   role: string;
   match_distance: number;
 };
+
+export type DocumentUploadResponse = {
+  id: number;
+  title: string;
+  file_name: string;
+  status: string;
+  message: string;
+};
