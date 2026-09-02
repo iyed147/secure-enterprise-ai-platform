@@ -21,3 +21,16 @@ class DocumentUploadResponse(BaseModel):
     file_name: str
     status: str
     message: str
+
+
+class DocumentChunkResponse(BaseModel):
+    id: int
+    document_id: int
+    chunk_index: int
+    page: int | None
+    content: str
+    allowed_roles: list[str]
+    embedding_dim: int | None  # on n'expose jamais le vecteur brut, juste sa dimension
+
+    class Config:
+        from_attributes = True

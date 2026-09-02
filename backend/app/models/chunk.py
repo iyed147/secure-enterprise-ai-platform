@@ -12,12 +12,13 @@ class DocumentChunk(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     page: Mapped[int] = mapped_column(Integer, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     allowed_roles: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
-
-    # Step 3.2 : ARRAY(Float) -> pgvector(Vector)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(settings.embedding_dimension), nullable=True)
 
     document = relationship("Document", back_populates="chunks")

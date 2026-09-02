@@ -6,7 +6,7 @@ from app.services.document_processing import load_and_split_pdf
 from app.services.embeddings import embed_texts
 
 
-def ingest_document(document: Document, db: Session) -> int:
+def ingest_document(document: Document, db: Session, owner_user_id: int | None = None) -> int:
     """
     Pipeline complet : PDF → chunks → embeddings → DB.
     Retourne le nombre de chunks insérés.
@@ -29,6 +29,7 @@ def ingest_document(document: Document, db: Session) -> int:
         for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
             db_chunk = DocumentChunk(
                 document_id=document.id,
+                owner_user_id=owner_user_id if owner_user_id is not None else document.owner_user_id,
                 chunk_index=i,
                 page=chunk.metadata.get("page", 0),
                 content=chunk.page_content,
