@@ -76,10 +76,39 @@ export default function DashboardPage() {
       <DocumentUpload onUploaded={loadDashboard} />
 
       <h3 style={{ marginTop: 20 }}>Documents autorisés</h3>
-      <ul>
+            
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {docs.map((doc) => (
-          <li key={doc.id}>
-            {doc.file_name} — <em>{doc.owner_role}</em>
+          <li
+            key={doc.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 0",
+              borderBottom: "1px solid #eee",
+            }}
+          >
+            <span>{doc.file_name}</span>
+            <em style={{ color: "#666" }}>— {doc.owner_role}</em>
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "2px 8px",
+                borderRadius: 12,
+                color: "#fff",
+                backgroundColor:
+                  doc.status === "processed"
+                    ? "#2e7d32"
+                    : doc.status === "failed"
+                    ? "#c62828"
+                    : "#f9a825",
+              }}
+            >
+              {doc.status}
+            </span>
           </li>
         ))}
       </ul>
