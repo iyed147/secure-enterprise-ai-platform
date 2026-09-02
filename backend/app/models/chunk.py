@@ -1,6 +1,9 @@
-from sqlalchemy import ForeignKey, Integer, Text, Float
+from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
+
+from app.core.config import settings
 from app.db.base import Base
 
 
@@ -14,7 +17,7 @@ class DocumentChunk(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     allowed_roles: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
 
-    # Temporaire Step 0.5 : ARRAY(Float). Step 1/2 => conversion vers pgvector(Vector)
-    embedding: Mapped[list[float] | None] = mapped_column(ARRAY(Float), nullable=True)
+    # Step 3.2 : ARRAY(Float) -> pgvector(Vector)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(settings.embedding_dimension), nullable=True)
 
     document = relationship("Document", back_populates="chunks")

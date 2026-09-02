@@ -13,11 +13,13 @@ export default function WebcamCapture({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const startCamera = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    streamRef.current = stream;
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
@@ -26,8 +28,8 @@ export default function WebcamCapture({
   };
 
   const stopCamera = () => {
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    if (stream) stream.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setStreaming(false);
   };
