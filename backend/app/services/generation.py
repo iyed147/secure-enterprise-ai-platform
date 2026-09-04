@@ -33,6 +33,7 @@ If the context genuinely does not contain enough information to answer, say clea
 Always answer in the same language as the question."""
 
 
+
 def build_context(chunks: list[dict]) -> str:
     """
     Regroupe les chunks PAR DOCUMENT, avec un en-tête fort par document,
