@@ -61,3 +61,20 @@ export type DocumentUploadResponse = {
   status: string;
   message: string;
 };
+
+export type ChatSource = {
+  document_id: number;
+  document_title: string;
+  file_name: string;
+  page: number | null;
+};
+
+export type ChatRequest = {
+  question: string;
+  document_ids?: number[] | null;
+};
+
+export type ChatResponse = {
+  answer: string;
+  sources: ChatSource[];
+};

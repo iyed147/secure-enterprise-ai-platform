@@ -14,12 +14,36 @@ def retrieve_relevant_chunks(
     document_ids: list[int] | None = None,
 ) -> list[DocumentChunk]:
     """
-    Retourne les top_k chunks les plus pertinents pour la question,
+    Retourne les chunks les plus pertinents pour la question,
     filtrés strictement par utilisateur AVANT la recherche vectorielle.
-    Si document_ids est fourni, la recherche est en plus restreinte
-    à ces documents précis.
+
+    Si document_ids contient PLUSIEURS documents, le retrieval est équilibré :
+    top_k chunks sont récupérés PAR document (pas top_k au total), pour garantir
+    que chaque document sélectionné est représenté dans le contexte envoyé au LLM.
+    Essentiel pour les questions comparatives ("lequel des deux a le plus de X ?").
+
+    Si document_ids contient un seul document (ou aucun), comportement inchangé :
+    top_k global.
     """
     query_embedding = embed_query(question)
+
+    # Cas multi-documents explicite : équilibrage par document
+    if document_ids and len(document_ids) > 1:
+        all_chunks: list[DocumentChunk] = []
+        for doc_id in document_ids:
+            stmt = (
+                select(DocumentChunk)
+                .where(
+                    DocumentChunk.owner_user_id == owner_user_id,
+                    DocumentChunk.document_id == doc_id,
+                )
+                .order_by(DocumentChunk.embedding.cosine_distance(query_embedding))
+                .limit(top_k)
+            )
+            all_chunks.extend(db.scalars(stmt).all())
+        return all_chunks
+
+    # Cas normal : un seul document ou recherche globale (comportement Step 4.1/4.2 inchangé)
     stmt = select(DocumentChunk).where(DocumentChunk.owner_user_id == owner_user_id)
 
     if document_ids:
@@ -55,10 +79,6 @@ def format_chunks_with_sources(chunks: list[DocumentChunk], db: Session) -> list
 
 
 def verify_documents_ownership(document_ids: list[int], owner_user_id: int, db: Session) -> bool:
-    """
-    Sécurité : vérifie que TOUS les document_ids demandés appartiennent bien
-    à owner_user_id, avant de les utiliser dans une recherche scopée.
-    """
     if not document_ids:
         return True
 

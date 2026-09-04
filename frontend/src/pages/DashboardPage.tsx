@@ -5,6 +5,7 @@ import { clearToken } from "../lib/auth";
 import type { DocumentResponse, FaceEnrollResponse, MeResponse } from "../types";
 import WebcamCapture from "../components/WebcamCapture";
 import DocumentUpload from "../components/DocumentUpload";
+import ChatPanel from "../components/ChatPanel";
 
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
@@ -76,7 +77,6 @@ export default function DashboardPage() {
       <DocumentUpload onUploaded={loadDashboard} />
 
       <h3 style={{ marginTop: 20 }}>Documents autorisés</h3>
-            
       <ul style={{ listStyle: "none", padding: 0 }}>
         {docs.map((doc) => (
           <li
@@ -112,6 +112,8 @@ export default function DashboardPage() {
           </li>
         ))}
       </ul>
+
+      <ChatPanel documents={docs} />
     </div>
   );
 }
