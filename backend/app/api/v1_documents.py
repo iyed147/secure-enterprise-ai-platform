@@ -145,3 +145,28 @@ def upload_document(
         status=doc.status,
         message=message,
     )
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = db.scalar(select(Document).where(Document.id == document_id))
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    if doc.owner_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied for this document",
+        )
+
+    # Supprime le fichier physique s'il existe
+    file_path = os.path.join(settings.upload_dir, doc.file_name)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Les chunks associés sont supprimés automatiquement via cascade="all, delete-orphan"
+    db.delete(doc)
+    db.commit()

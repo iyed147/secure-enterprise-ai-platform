@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Button from "./ui/Button";
 
 type Props = {
   onCapture: (base64: string) => Promise<void> | void;
@@ -58,21 +59,42 @@ export default function WebcamCapture({
   };
 
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div className="flex flex-col items-center gap-4">
       {!streaming ? (
-        <button type="button" onClick={startCamera} disabled={disabled || busy}>
+        <Button type="button" variant="secondary" fullWidth onClick={startCamera} disabled={disabled || busy}>
           Ouvrir la caméra
-        </button>
+        </Button>
       ) : (
         <>
-          <video ref={videoRef} style={{ width: 320, borderRadius: 8, border: "1px solid #ccc" }} />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={capture} disabled={disabled || busy}>
+          <div className="relative w-64 h-64 rounded-full overflow-hidden bg-slate-900 shadow-elevated">
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+
+            {/* Anneau Face ID */}
+            <div className="absolute inset-0 rounded-full border-4 border-primary/60" />
+            <div className="absolute inset-2 rounded-full border-2 border-primary/30 animate-corner-pulse" />
+
+            {/* Ligne de scan */}
+            <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
+              <div className="absolute left-0 right-0 h-0.5 bg-primary shadow-[0_0_12px_2px_rgba(79,70,229,0.8)] animate-scan-line" />
+            </div>
+
+            {busy && (
+              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
+                <span className="text-white text-sm font-semibold">Analyse...</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 w-full max-w-xs">
+            <Button type="button" fullWidth onClick={capture} disabled={disabled || busy}>
               {busy ? "Traitement..." : buttonLabel}
-            </button>
-            <button type="button" onClick={stopCamera} disabled={busy}>
-              Fermer la caméra
-            </button>
+            </Button>
+            <Button type="button" variant="secondary" onClick={stopCamera} disabled={busy}>
+              Fermer
+            </Button>
           </div>
         </>
       )}

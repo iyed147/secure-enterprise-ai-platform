@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 
 from langchain_ollama import ChatOllama
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from app.core.config import settings
 
@@ -14,7 +14,7 @@ def get_llm_client() -> ChatOllama:
         _llm_client = ChatOllama(
             model=settings.ollama_llm_model,
             base_url=settings.ollama_base_url,
-            temperature=0.1,  # réduit de 0.2, plus déterministe pour usage factuel strict
+            temperature=0.1,
             num_predict=512,
             num_ctx=2048,
             keep_alive="30m",
@@ -30,16 +30,11 @@ However, you MUST NEVER attribute a fact, skill, project, or detail to a documen
 Do not blend or transfer information between documents.
 You MUST NOT introduce any fact, name, date, or skill that is not present in the context.
 If the context genuinely does not contain enough information to answer, say clearly that you cannot find this information in the available documents.
+You may use the earlier conversation turns to understand follow-up questions (e.g., "he", "that project", "the other one" refer to something mentioned before). The factual grounding rules above still apply — never introduce a fact that isn't in the context below, even if it was mentioned earlier in the conversation.
 Always answer in the same language as the question."""
 
 
-
 def build_context(chunks: list[dict]) -> str:
-    """
-    Regroupe les chunks PAR DOCUMENT, avec un en-tête fort par document,
-    pour empêcher le LLM de mélanger les informations entre plusieurs sources
-    (ex: attribuer une compétence d'une personne à une autre).
-    """
     if not chunks:
         return "(no relevant documents found)"
 
@@ -58,28 +53,39 @@ def build_context(chunks: list[dict]) -> str:
     return "\n\n".join(sections)
 
 
-def _build_messages(question: str, chunks: list[dict]):
+MAX_HISTORY_MESSAGES = 6  # limite la fenêtre d'historique injectée (3 échanges), pour ne pas exploser num_ctx
+
+
+def _build_messages(question: str, chunks: list[dict], history: list[dict] | None = None):
     context = build_context(chunks)
+
+    messages = [SystemMessage(content=SYSTEM_PROMPT)]
+
+    if history:
+        recent_history = history[-MAX_HISTORY_MESSAGES:]
+        for msg in recent_history:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
+
     user_message = f"""Context:
 {context}
 
 Question: {question}"""
-    return [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=user_message),
-    ]
+    messages.append(HumanMessage(content=user_message))
+
+    return messages
 
 
-def generate_answer(question: str, chunks: list[dict]) -> str:
-    """Non-streamé — gardé pour les scripts de test (test_rag.py)."""
+def generate_answer(question: str, chunks: list[dict], history: list[dict] | None = None) -> str:
     llm = get_llm_client()
-    response = llm.invoke(_build_messages(question, chunks))
+    response = llm.invoke(_build_messages(question, chunks, history))
     return response.content
 
 
-def stream_answer(question: str, chunks: list[dict]) -> Iterator[str]:
-    """Streamé — utilisé par l'endpoint /chat/stream."""
+def stream_answer(question: str, chunks: list[dict], history: list[dict] | None = None) -> Iterator[str]:
     llm = get_llm_client()
-    for chunk in llm.stream(_build_messages(question, chunks)):
+    for chunk in llm.stream(_build_messages(question, chunks, history)):
         if chunk.content:
             yield chunk.content

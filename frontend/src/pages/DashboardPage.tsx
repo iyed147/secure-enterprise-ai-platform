@@ -2,18 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { clearToken } from "../lib/auth";
-import type { DocumentResponse, FaceEnrollResponse, MeResponse } from "../types";
-import WebcamCapture from "../components/WebcamCapture";
+import type { DocumentResponse, MeResponse } from "../types";
 import DocumentUpload from "../components/DocumentUpload";
+import DocumentList from "../components/DocumentList";
 import ChatPanel from "../components/ChatPanel";
+import Card from "../components/ui/Card";
 
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [enrollLoading, setEnrollLoading] = useState(false);
-  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const loadDashboard = async () => {
@@ -27,7 +26,7 @@ export default function DashboardPage() {
     } catch (err: any) {
       if (err?.response?.status === 401) {
         clearToken();
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
       setError(err?.response?.data?.detail || "Failed to load dashboard");
@@ -41,77 +40,44 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onFaceCaptureEnroll = async (image_base64: string) => {
-    setEnrollMsg(null);
-    setEnrollLoading(true);
-    try {
-      const { data } = await api.post<FaceEnrollResponse>("/api/v1/auth/enroll-face", { image_base64 });
-      setEnrollMsg(data.message || "Face enrolled.");
-    } catch (err: any) {
-      setEnrollMsg(err?.response?.data?.detail || "Face enroll failed");
-    } finally {
-      setEnrollLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <p className="text-slate-400">Chargement...</p>
+      </div>
+    );
+  }
 
-  if (loading) return <p>Chargement...</p>;
-  if (error) return <p style={{ color: "crimson" }}>{error}</p>;
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <p className="text-danger bg-danger-light rounded-md px-4 py-3">{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2>Dashboard</h2>
+    <div className="max-w-4xl mx-auto px-6 py-10">
       {me && (
-        <div style={{ marginBottom: 16 }}>
-          <p><strong>Welcome:</strong> {me.full_name}</p>
-          <p><strong>Role:</strong> {me.role}</p>
-          <p><strong>Email:</strong> {me.email}</p>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">
+            Welcome, {me.full_name.split(" ")[0]} 👋
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {me.role.charAt(0).toUpperCase() + me.role.slice(1)} · {me.email}
+          </p>
         </div>
       )}
 
-      <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h4>Face ID Enrollment</h4>
-        <WebcamCapture onCapture={onFaceCaptureEnroll} buttonLabel="Enrôler mon visage" disabled={enrollLoading} />
-        {enrollMsg && <p style={{ marginTop: 8 }}>{enrollMsg}</p>}
-      </div>
-
-      <DocumentUpload onUploaded={loadDashboard} />
-
-      <h3 style={{ marginTop: 20 }}>Documents autorisés</h3>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {docs.map((doc) => (
-          <li
-            key={doc.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 0",
-              borderBottom: "1px solid #eee",
-            }}
-          >
-            <span>{doc.file_name}</span>
-            <em style={{ color: "#666" }}>— {doc.owner_role}</em>
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: 12,
-                fontWeight: 600,
-                padding: "2px 8px",
-                borderRadius: 12,
-                color: "#fff",
-                backgroundColor:
-                  doc.status === "processed"
-                    ? "#2e7d32"
-                    : doc.status === "failed"
-                    ? "#c62828"
-                    : "#f9a825",
-              }}
-            >
-              {doc.status}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <Card className="mb-6">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
+          Mes documents
+        </h2>
+        <DocumentUpload onUploaded={loadDashboard} />
+        <div className="mt-4">
+          <DocumentList documents={docs} onDeleted={loadDashboard} />
+        </div>
+      </Card>
 
       <ChatPanel documents={docs} />
     </div>

@@ -1,9 +1,15 @@
 from pydantic import BaseModel
 
 
+class ChatMessage(BaseModel):
+    role: str  # "user" ou "assistant"
+    content: str
+
+
 class ChatRequest(BaseModel):
     question: str
-    document_ids: list[int] | None = None  # scoping optionnel
+    document_ids: list[int] | None = None
+    history: list[ChatMessage] | None = None  # historique de la conversation en cours
 
 
 class ChatSource(BaseModel):

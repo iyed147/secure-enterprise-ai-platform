@@ -30,18 +30,22 @@ def _resolve_chunks(payload: ChatRequest, current_user: User, db: Session):
                 detail="One or more selected documents do not belong to you",
             )
 
-    # 5 chunks/doc en comparaison multi-documents, 5 aussi en single-doc pour mieux couvrir le contenu
-    top_k = 5
-
     chunks = retrieve_relevant_chunks(
         question=question,
         owner_user_id=current_user.id,
         db=db,
-        top_k=top_k,
+        top_k=5,
         document_ids=payload.document_ids,
     )
     results = format_chunks_with_sources(chunks, db)
     return question, results
+
+
+def _history_as_dicts(payload: ChatRequest) -> list[dict] | None:
+    if not payload.history:
+        return None
+    return [{"role": m.role, "content": m.content} for m in payload.history]
+
 
 @router.post("", response_model=ChatResponse)
 def chat(
@@ -50,7 +54,8 @@ def chat(
     current_user: User = Depends(get_current_user),
 ):
     question, results = _resolve_chunks(payload, current_user, db)
-    answer = generate_answer(question, results)
+    history = _history_as_dicts(payload)
+    answer = generate_answer(question, results, history)
 
     sources = [
         ChatSource(
@@ -71,6 +76,7 @@ def chat_stream(
     current_user: User = Depends(get_current_user),
 ):
     question, results = _resolve_chunks(payload, current_user, db)
+    history = _history_as_dicts(payload)
 
     sources = [
         {
@@ -83,13 +89,9 @@ def chat_stream(
     ]
 
     def event_generator():
-        # Premier événement : les sources (affichables immédiatement)
         yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
-
-        # Puis le texte, token par token
-        for token in stream_answer(question, results):
+        for token in stream_answer(question, results, history):
             yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
-
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

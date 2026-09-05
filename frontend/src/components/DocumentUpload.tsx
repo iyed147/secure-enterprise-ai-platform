@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { FormEvent } from "react";
 import { api } from "../lib/api";
 import type { DocumentUploadResponse } from "../types";
+import Button from "./ui/Button";
+import Input from "./ui/Input";
 
 type Props = {
   onUploaded?: () => void;
@@ -13,6 +15,17 @@ export default function DocumentUpload({ onUploaded }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped && dropped.type === "application/pdf") {
+      setFile(dropped);
+    }
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -35,9 +48,10 @@ export default function DocumentUpload({ onUploaded }: Props) {
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      setMessage(`"${data.title}" uploadé avec succès (status: ${data.status}).`);
+      setMessage(`"${data.title}" ajouté avec succès.`);
       setFile(null);
       setTitle("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       onUploaded?.();
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Échec de l'upload.");
@@ -47,34 +61,56 @@ export default function DocumentUpload({ onUploaded }: Props) {
   };
 
   return (
-    <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-      <h4>+ Insert Company Document</h4>
-      <p style={{ fontSize: 13, color: "#666", marginTop: -4 }}>
-        Ce document sera automatiquement associé à votre département.
-      </p>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 10, maxWidth: 420 }}>
-        <label>Fichier PDF</label>
+    <form onSubmit={onSubmit} className="flex flex-col gap-3">
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={onDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`
+          border-2 border-dashed rounded-lg px-6 py-8 text-center cursor-pointer transition-colors
+          ${dragActive ? "border-primary bg-primary-light" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}
+        `}
+      >
         <input
+          ref={fileInputRef}
           type="file"
           accept="application/pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="hidden"
         />
+        <div className="text-3xl mb-2">📄</div>
+        {file ? (
+          <p className="text-sm font-semibold text-slate-800">{file.name}</p>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-slate-600">
+              Glisse un PDF ici ou clique pour sélectionner
+            </p>
+            <p className="text-xs text-slate-400 mt-1">Sera associé à votre compte automatiquement</p>
+          </>
+        )}
+      </div>
 
-        <label>Titre (optionnel)</label>
-        <input
+      <div className="flex gap-2">
+        <Input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Laisser vide = nom du fichier"
+          placeholder="Titre (optionnel)"
+          className="flex-1"
         />
+        <Button type="submit" disabled={loading || !file}>
+          {loading ? "Envoi..." : "Uploader"}
+        </Button>
+      </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Upload en cours..." : "Uploader"}
-        </button>
-      </form>
-
-      {message && <p style={{ color: "green", marginTop: 8 }}>{message}</p>}
-      {error && <p style={{ color: "crimson", marginTop: 8 }}>{error}</p>}
-    </div>
+      {message && (
+        <p className="text-sm text-success bg-success-light rounded-md px-3 py-2">{message}</p>
+      )}
+      {error && (
+        <p className="text-sm text-danger bg-danger-light rounded-md px-3 py-2">{error}</p>
+      )}
+    </form>
   );
 }
