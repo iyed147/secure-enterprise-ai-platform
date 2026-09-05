@@ -27,5 +27,9 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     chunk_overlap: int = 150
 
+    # Face recognition (NEW)
+    face_embedding_dimension: int = 128  # Facenet produit des vecteurs de 128
+    face_match_threshold: float = 10.0   # à calibrer empiriquement au Step 5.4
+
 
 settings = Settings()

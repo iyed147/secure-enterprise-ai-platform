@@ -14,6 +14,7 @@ from app.services.retrieval import (
     verify_documents_ownership,
 )
 from app.services.generation import generate_answer, stream_answer
+from app.services.small_talk import detect_small_talk
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
@@ -53,6 +54,10 @@ def chat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    small_talk_reply = detect_small_talk(payload.question)
+    if small_talk_reply:
+        return ChatResponse(answer=small_talk_reply, sources=[])
+
     question, results = _resolve_chunks(payload, current_user, db)
     history = _history_as_dicts(payload)
     answer = generate_answer(question, results, history)
@@ -75,6 +80,14 @@ def chat_stream(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    small_talk_reply = detect_small_talk(payload.question)
+    if small_talk_reply:
+        def small_talk_generator():
+            yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
+            yield f"data: {json.dumps({'type': 'token', 'content': small_talk_reply})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        return StreamingResponse(small_talk_generator(), media_type="text/event-stream")
+
     question, results = _resolve_chunks(payload, current_user, db)
     history = _history_as_dicts(payload)
 
