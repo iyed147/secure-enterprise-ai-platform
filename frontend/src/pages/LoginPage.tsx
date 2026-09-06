@@ -10,15 +10,18 @@ import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 
+const MAX_FACE_ATTEMPTS = 2;
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [faceLoading, setFaceLoading] = useState(false);
+  const [faceAttempts, setFaceAttempts] = useState(0);
   const navigate = useNavigate();
 
-    const onSubmit = async (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -33,7 +36,7 @@ export default function LoginPage() {
     }
   };
 
-    const onFaceCaptureLogin = async (image_base64: string) => {
+  const onFaceCaptureLogin = async (image_base64: string) => {
     setError(null);
     setFaceLoading(true);
     try {
@@ -41,11 +44,14 @@ export default function LoginPage() {
       setToken(data.access_token);
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
+      setFaceAttempts((prev) => prev + 1);
       setError(err?.response?.data?.detail || "Face login failed");
     } finally {
       setFaceLoading(false);
     }
   };
+
+  const faceIdBlocked = faceAttempts >= MAX_FACE_ATTEMPTS;
 
   return (
     <div className="min-h-[calc(100vh-73px)] flex items-center justify-center px-6 py-12 bg-slate-50">
@@ -86,7 +92,19 @@ export default function LoginPage() {
         </div>
 
         <p className="text-sm font-semibold text-slate-700 text-center mb-4">Login with Face ID</p>
-        <WebcamCapture onCapture={onFaceCaptureLogin} buttonLabel="Se connecter" disabled={faceLoading} />
+
+        {faceIdBlocked ? (
+          <div className="text-center bg-warning-light rounded-lg px-4 py-4">
+            <p className="text-sm text-warning font-medium mb-1">
+              Reconnaissance faciale indisponible
+            </p>
+            <p className="text-xs text-slate-500">
+              Utilisez votre email et mot de passe ci-dessus pour vous connecter.
+            </p>
+          </div>
+        ) : (
+          <WebcamCapture onCapture={onFaceCaptureLogin} buttonLabel="Se connecter" disabled={faceLoading} />
+        )}
 
         <p className="text-sm text-slate-500 text-center mt-6">
           Pas encore de compte ?{" "}

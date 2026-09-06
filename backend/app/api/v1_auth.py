@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.config import settings
 from app.core.security import (
-    FACE_MATCH_THRESHOLD,
     create_access_token,
     euclidean_distance,
     generate_face_embedding,
@@ -23,8 +23,6 @@ from app.schemas.auth import (
     FaceLoginRequest,
     FaceLoginResponse,
     LoginRequest,
-    MockLoginRequest,
-    MockLoginResponse,
     RegisterRequest,
 )
 
@@ -85,23 +83,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/mock-login", response_model=MockLoginResponse)
-def mock_login(payload: MockLoginRequest, db: Session = Depends(get_db)):
-    email = payload.email.strip().lower()
-
-    user = db.scalar(select(User).options(joinedload(User.role)).where(User.email == email))
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email")
-
-    return MockLoginResponse(
-        access_token=f"mock-token-user-{user.id}",
-        user_id=user.id,
-        full_name=user.full_name,
-        email=user.email,
-        role=user.role.name,
-    )
-
-
 @router.post("/enroll-face", response_model=FaceEnrollResponse)
 def enroll_face(
     payload: FaceEnrollRequest,
@@ -116,13 +97,18 @@ def enroll_face(
     if not image_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image data")
 
-    current_user.face_embedding = generate_face_embedding(image_bytes)  # bytes -> LargeBinary OK
+    try:
+        embedding = generate_face_embedding(image_bytes)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    current_user.face_embedding = embedding
     db.add(current_user)
     db.commit()
 
     return FaceEnrollResponse(
         success=True,
-        message=f"Face enrolled successfully for {current_user.full_name}",
+        message=f"Visage enregistré avec succès pour {current_user.full_name}",
     )
 
 
@@ -136,7 +122,10 @@ def login_face(payload: FaceLoginRequest, db: Session = Depends(get_db)):
     if not image_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image data")
 
-    probe_embedding = generate_face_embedding(image_bytes)
+    try:
+        probe_embedding = generate_face_embedding(image_bytes)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     candidates = db.scalars(
         select(User).options(joinedload(User.role)).where(User.face_embedding.isnot(None))
@@ -157,7 +146,7 @@ def login_face(payload: FaceLoginRequest, db: Session = Depends(get_db)):
             best_distance = distance
             best_match = candidate
 
-    if best_match is None or best_distance > FACE_MATCH_THRESHOLD:
+    if best_match is None or best_distance > settings.face_match_threshold:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Face not recognized")
 
     if not best_match.is_active:
