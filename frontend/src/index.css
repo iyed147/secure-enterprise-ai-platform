@@ -46,3 +46,7 @@ body {
 .animate-corner-pulse {
   animation: corner-pulse 1.8s ease-in-out infinite;
 }
+
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}

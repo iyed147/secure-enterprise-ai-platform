@@ -59,13 +59,18 @@ export default function DashboardPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       {me && (
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">
-            Welcome, {me.full_name.split(" ")[0]} 👋
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {me.role.charAt(0).toUpperCase() + me.role.slice(1)} · {me.email}
-          </p>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-indigo-400 flex items-center justify-center text-white font-bold flex-shrink-0">
+            {me.full_name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Welcome, {me.full_name.split(" ")[0]}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {me.role.charAt(0).toUpperCase() + me.role.slice(1)} · {me.email}
+            </p>
+          </div>
         </div>
       )}
 
