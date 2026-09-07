@@ -22,14 +22,6 @@ Le projet combine : **Software Engineering + Security + Computer Vision + Genera
 
 ---
 
-Chaque employé :
-1. S'identifie de manière sécurisée (mot de passe **ou** reconnaissance faciale)
-2. Importe ses propres documents (strictement privés, jamais partagés entre comptes)
-3. Pose des questions en langage naturel à un assistant IA
-4. Reçoit une réponse **sourcée**, construite uniquement à partir de ses documents autorisés — jamais inventée, jamais issue d'un autre compte
-
----
-
 ## ✅ Ce que le projet démontre
 
 - Une architecture **Full-Stack** complète (React/TypeScript ↔ FastAPI ↔ PostgreSQL)
@@ -43,29 +35,38 @@ Chaque employé :
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    A["React + TypeScript + Tailwind CSS"] --> B["FastAPI — Python"]
 
-React + TypeScript + Tailwind
-            │
-            ▼
-       FastAPI (Python)
-   ┌────────┼─────────┐
-   │        │         │
-  Auth   Documents   Chat (RAG)
-   │        │         │
- JWT +  MediaPipe +  LangChain
- bcrypt  DeepFace    (chunking → embeddings → retrieval)
-                          │
-                          ▼
-              PostgreSQL + pgvector
-              (isolé par owner_user_id)
-                          │
-                          ▼
-            LLM — Ollama local ou Groq cloud
-                          │
-                          ▼
-              Réponse sourcée (streaming)
+    B --> C["Authentication"]
+    B --> D["Documents"]
+    B --> E["Chat — RAG"]
 
+    C --> C1["JWT + bcrypt"]
 
+    D --> D1["MediaPipe"]
+    D --> D2["DeepFace / FaceNet"]
+
+    E --> E1["LangChain"]
+    E1 --> E2["Chunking"]
+    E2 --> E3["Embeddings"]
+    E3 --> E4["Vector Retrieval"]
+
+    D --> F["PostgreSQL + pgvector"]
+    E4 --> F
+
+    F --> G["owner_user_id isolation"]
+
+    G --> H["LLM"]
+    H --> H1["Ollama — Local"]
+    H --> H2["Groq — Cloud"]
+
+    H1 --> I["Sourced Response"]
+    H2 --> I
+
+    C --> F
+```
 
 ---
 
