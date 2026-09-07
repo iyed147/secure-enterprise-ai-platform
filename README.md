@@ -22,28 +22,49 @@ Le projet combine : **Software Engineering + Security + Computer Vision + Genera
 
 ---
 
+Chaque employé :
+1. S'identifie de manière sécurisée (mot de passe **ou** reconnaissance faciale)
+2. Importe ses propres documents (strictement privés, jamais partagés entre comptes)
+3. Pose des questions en langage naturel à un assistant IA
+4. Reçoit une réponse **sourcée**, construite uniquement à partir de ses documents autorisés — jamais inventée, jamais issue d'un autre compte
+
+---
+
+## ✅ Ce que le projet démontre
+
+- Une architecture **Full-Stack** complète (React/TypeScript ↔ FastAPI ↔ PostgreSQL)
+- Un pipeline **RAG** de bout en bout : ingestion PDF → chunking → embeddings → recherche vectorielle → génération de réponse
+- Une **isolation stricte des données par utilisateur**, vérifiée par des tests croisés multi-comptes
+- Une authentification biométrique réelle (**MediaPipe + DeepFace/Facenet**), pas un placeholder
+- Une architecture LLM **interchangeable** (local via Ollama ↔ cloud via Groq) sans changement de code métier
+- Une attention portée à la **lutte contre les hallucinations** (prompt engineering itératif, tests de confusion inter-documents, réponses partielles nuancées)
+
+---
+
 ## Architecture
 
+
 React + TypeScript + Tailwind
-│
-▼
-FastAPI (Python)
-┌────────┼─────────┐
-│ │ │
-Auth Documents Chat (RAG)
-│ │ │
-JWT + MediaPipe + LangChain
-bcrypt DeepFace (chunking → embeddings → retrieval)
-│
-▼
-PostgreSQL + pgvector
-(isolé par owner_user_id)
-│
-▼
-LLM — Ollama local ou Groq cloud
-│
-▼
-Réponse sourcée (streaming)
+            │
+            ▼
+       FastAPI (Python)
+   ┌────────┼─────────┐
+   │        │         │
+  Auth   Documents   Chat (RAG)
+   │        │         │
+ JWT +  MediaPipe +  LangChain
+ bcrypt  DeepFace    (chunking → embeddings → retrieval)
+                          │
+                          ▼
+              PostgreSQL + pgvector
+              (isolé par owner_user_id)
+                          │
+                          ▼
+            LLM — Ollama local ou Groq cloud
+                          │
+                          ▼
+              Réponse sourcée (streaming)
+
 
 
 ---
