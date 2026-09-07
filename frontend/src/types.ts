@@ -78,3 +78,13 @@ export type ChatResponse = {
   answer: string;
   sources: ChatSource[];
 };
+
+export type ChangePasswordRequest = {
+  current_password: string;
+  new_password: string;
+};
+
+export type ChangePasswordResponse = {
+  success: boolean;
+  message: string;
+};

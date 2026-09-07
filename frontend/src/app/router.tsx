@@ -5,6 +5,7 @@ import ContactPage from "../pages/ContactPage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import DashboardPage from "../pages/DashboardPage";
+import ProfilePage from "../pages/ProfilePage";
 import { getToken } from "../lib/auth";
 import type { JSX } from "react/jsx-runtime";
 
@@ -54,6 +55,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         ),
       },

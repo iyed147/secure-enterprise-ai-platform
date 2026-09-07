@@ -22,12 +22,20 @@ export default function AppLayout() {
 
           <nav className="flex items-center gap-4">
             {isAuthenticated ? (
-              <button
-                onClick={onLogout}
-                className="text-sm font-semibold text-slate-600 hover:text-danger transition-colors"
-              >
-                Logout
-              </button>
+              <>
+                <Link
+                  to="/profile"
+                  className="text-sm font-medium text-slate-600 hover:text-primary transition-colors"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={onLogout}
+                  className="text-sm font-semibold text-slate-600 hover:text-danger transition-colors"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               location.pathname !== "/register" && (
                 <Link
